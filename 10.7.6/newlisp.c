@@ -1477,6 +1477,8 @@ for(i = 0; i < 32; i++)
 /* init system wide string streams */
 openStrStream(&readLineStream, 16, 0);
 openStrStream(&errorStream, MAX_LINE, 0);
+
+initGenerationalGC();
 }
 
 void initStacks()
@@ -1588,6 +1590,20 @@ switch(cell->type)
         
         if(pCell->type == CELL_LAMBDA)
             { 
+            BYTECODE_OBJ * bc = (pCell->aux != 0 && pCell->aux != (UINT)nilCell) ? (BYTECODE_OBJ *)pCell->aux : NULL;
+            if(bc != NULL && bc->magic != BYTECODE_MAGIC) bc = NULL;
+            if(bc == NULL)
+                {
+                bc = compileLambda(pCell, NULL);
+                if(bc != NULL) pCell->aux = (UINT)bc;
+                }
+            if(bc != NULL)
+                {
+                pushLambda(cell);
+                result = executeBytecode(pCell, args->next, newContext);
+                --lambdaStackIdx;
+                break;
+                }
             pushLambda(cell);
             result = evaluateLambda((CELL *)pCell->contents, args->next, newContext); 
             --lambdaStackIdx; 
@@ -1826,6 +1842,7 @@ if(arg != nilCell)
         cell = result = copyCell((CELL*)((SYMBOL *)arg->contents)->contents);
     else
         cell = result = copyCell(evaluateExpression(arg));
+    pushResult(result);
        
     while((arg = arg->next) != nilCell)
         {
@@ -1834,6 +1851,7 @@ if(arg != nilCell)
         else
             cell = cell->next = copyCell(evaluateExpression(arg));
         }
+    result = popResult();
     }
 
 /* change to new context */
@@ -1905,6 +1923,7 @@ while( (localLst = localLst->next) != nilCell)
     result = evaluateExpression(localLst);
     }
 result = copyCell(result);
+pushResult(result);
 
 /* restore symbols used as locals */
 while(localCount--)
@@ -1913,6 +1932,8 @@ while(localCount--)
     deleteList((CELL *)symbol->contents);
     symbol->contents = popEnvironment();
     }
+
+result = popResult();
 
 currentContext = contextSave;
 symbolCheck = NULL;
@@ -2006,10 +2027,25 @@ return(result);
 }
 
 
-/* -------------- list/cell creation/deletion routines ---------------- */
+/* ----------------- Generational Garbage Collector ------------------ */
 
+#define GEN0_SIZE_CELLS (2 * 1024 * 1024) /* 2M cells = 64 MB */
+CELL * gen0_start = NULL;
+CELL * gen0_ptr = NULL;
+CELL * gen0_limit = NULL;
+UINT gen0_collections = 0;
 
-CELL * stuffInteger(UINT contents)
+void initGenerationalGC(void)
+{
+if(gen0_start == NULL)
+    {
+    gen0_start = (CELL *)allocMemory(GEN0_SIZE_CELLS * sizeof(CELL));
+    gen0_ptr = gen0_start;
+    gen0_limit = gen0_start + GEN0_SIZE_CELLS;
+    }
+}
+
+CELL * allocGen1Cell(int type)
 {
 CELL * cell;
 
@@ -2018,7 +2054,24 @@ cell = firstFreeCell;
 firstFreeCell = cell->next;
 ++cellCount;
 
-cell->type = CELL_LONG;
+cell->type = type;
+cell->next = nilCell;
+cell->aux = (UINT)nilCell;
+cell->contents = (UINT)nilCell;
+
+return(cell);
+}
+
+CELL * allocGen1CellWithContents(int type, UINT contents)
+{
+CELL * cell;
+
+if(firstFreeCell == NULL) allocBlock();
+cell = firstFreeCell;
+firstFreeCell = cell->next;
+++cellCount;
+
+cell->type = type;
 cell->next = nilCell;
 cell->aux = (UINT)nilCell;
 cell->contents = contents;
@@ -2026,19 +2079,237 @@ cell->contents = contents;
 return(cell);
 }
 
+CELL * gcEvacuate(CELL * cell)
+{
+CELL * firstNewCell = NULL;
+CELL * prevNewCell = NULL;
+
+if(cell == NULL || cell == nilCell || cell == trueCell)
+    return(cell);
+
+if(!isInGen0(cell))
+    return(cell);
+
+if(cell->type == CELL_FORWARD)
+    return((CELL *)cell->contents);
+
+while(cell != nilCell && isInGen0(cell))
+    {
+    if(cell->type == CELL_FORWARD)
+        {
+        if(prevNewCell != NULL)
+            prevNewCell->next = (CELL *)cell->contents;
+        return(firstNewCell ? firstNewCell : (CELL *)cell->contents);
+        }
+
+    CELL * newCell = allocGen1Cell(cell->type);
+    newCell->aux = cell->aux;
+    newCell->contents = cell->contents;
+    newCell->next = cell->next;
+
+    if(firstNewCell == NULL)
+        firstNewCell = newCell;
+    if(prevNewCell != NULL)
+        prevNewCell->next = newCell;
+    prevNewCell = newCell;
+
+    CELL * origNext = (CELL *)cell->next;
+    cell->type = CELL_FORWARD;
+    cell->contents = (UINT)newCell;
+
+    if(isEnvelope(newCell->type))
+        {
+        if(newCell->type == CELL_ARRAY)
+            {
+            CELL * * addr = (CELL * *)newCell->contents;
+            ssize_t size = (newCell->aux - 1) / sizeof(UINT);
+            while(size > 0 && addr != NULL)
+                {
+                *addr = gcEvacuate(*addr);
+                addr++;
+                size--;
+                }
+            }
+        else
+            {
+            newCell->contents = (UINT)gcEvacuate((CELL *)newCell->contents);
+            if(newCell->type == CELL_LAMBDA)
+                {
+                BYTECODE_OBJ * bc = (cell->aux != 0 && cell->aux != (UINT)nilCell) ? (BYTECODE_OBJ *)cell->aux : NULL;
+                if(bc != NULL && bc->magic == BYTECODE_MAGIC)
+                    newCell->aux = (UINT)bc;
+                else if(newCell->contents != (UINT)nilCell)
+                    {
+                    CELL * last = (CELL *)newCell->contents;
+                    while(last->next != nilCell)
+                        last = last->next;
+                    newCell->aux = (UINT)last;
+                    }
+                else
+                    newCell->aux = (UINT)nilCell;
+                }
+            else if(newCell->contents != (UINT)nilCell)
+                {
+                CELL * last = (CELL *)newCell->contents;
+                while(last->next != nilCell)
+                    last = last->next;
+                newCell->aux = (UINT)last;
+                }
+            }
+        }
+
+    cell = origNext;
+    }
+
+if(prevNewCell != NULL && cell != nilCell)
+    prevNewCell->next = cell;
+
+return(firstNewCell);
+}
+
+#define MAX_CONTEXTS 256
+static SYMBOL * visitedContexts[MAX_CONTEXTS];
+static int visitedContextCount = 0;
+
+static int isContextVisited(SYMBOL * ctx)
+{
+int i;
+for(i = 0; i < visitedContextCount; i++)
+    if(visitedContexts[i] == ctx) return(1);
+return(0);
+}
+
+void gcWalkSymbolTree(SYMBOL * sPtr)
+{
+if(sPtr == NULL || sPtr == NIL_SYM || sPtr == &sentinel)
+    return;
+
+gcWalkSymbolTree(sPtr->left);
+
+if(sPtr->contents != 0 && sPtr->contents != (UINT)nilCell)
+    {
+    CELL * cell = (CELL *)sPtr->contents;
+    sPtr->contents = (UINT)gcEvacuate(cell);
+    cell = (CELL *)sPtr->contents;
+
+    if(cell != NULL && cell->type == CELL_CONTEXT)
+        {
+        SYMBOL * ctx = (SYMBOL *)cell->contents;
+        if(ctx != NULL && !isContextVisited(ctx))
+            {
+            if(visitedContextCount < MAX_CONTEXTS)
+                visitedContexts[visitedContextCount++] = ctx;
+            if(cell->aux != 0)
+                gcWalkSymbolTree((SYMBOL *)cell->aux);
+            }
+        }
+    }
+
+gcWalkSymbolTree(sPtr->right);
+}
+
+void collectGen0(CELL ** extraRoot)
+{
+UINT * sPtr;
+
+visitedContextCount = 0;
+
+/* 0. Extra root if provided */
+if(extraRoot != NULL && *extraRoot != NULL && isInGen0(*extraRoot))
+    *extraRoot = gcEvacuate(*extraRoot);
+
+/* 1. Walk symbol trees of all contexts starting from mainContext */
+if(mainContext != NULL && mainContext->contents != 0)
+    {
+    CELL * mcCell = (CELL *)mainContext->contents;
+    if(visitedContextCount < MAX_CONTEXTS)
+        visitedContexts[visitedContextCount++] = mainContext;
+    if(mcCell->aux != 0)
+        gcWalkSymbolTree((SYMBOL *)mcCell->aux);
+    }
+if(currentContext != NULL && !isContextVisited(currentContext) && currentContext->contents != 0)
+    {
+    CELL * ccCell = (CELL *)currentContext->contents;
+    if(visitedContextCount < MAX_CONTEXTS)
+        visitedContexts[visitedContextCount++] = currentContext;
+    if(ccCell->aux != 0)
+        gcWalkSymbolTree((SYMBOL *)ccCell->aux);
+    }
+
+/* 2. Walk envStack */
+if(envStack != NULL && envStackIdx != NULL)
+    {
+    for(sPtr = envStack; sPtr < envStackIdx; sPtr++)
+        {
+        if(isInGen0((CELL *)*sPtr))
+            *sPtr = (UINT)gcEvacuate((CELL *)*sPtr);
+        }
+    }
+
+/* 3. Walk resultStack */
+if(resultStack != NULL && resultStackIdx != NULL)
+    {
+    for(sPtr = resultStack + 1; sPtr <= resultStackIdx; sPtr++)
+        {
+        if(isInGen0((CELL *)*sPtr))
+            *sPtr = (UINT)gcEvacuate((CELL *)*sPtr);
+        }
+    }
+
+/* 4. Walk lambdaStack */
+if(lambdaStack != NULL && lambdaStackIdx != NULL)
+    {
+    for(sPtr = lambdaStack; sPtr < lambdaStackIdx; sPtr++)
+        {
+        if(isInGen0((CELL *)*sPtr))
+            *sPtr = (UINT)gcEvacuate((CELL *)*sPtr);
+        }
+    }
+
+/* 5. Global registers */
+if(itSymbol != NULL && itSymbol->contents != 0 && isInGen0((CELL *)itSymbol->contents))
+    itSymbol->contents = (UINT)gcEvacuate((CELL *)itSymbol->contents);
+
+if(argsSymbol != NULL && argsSymbol->contents != 0 && isInGen0((CELL *)argsSymbol->contents))
+    argsSymbol->contents = (UINT)gcEvacuate((CELL *)argsSymbol->contents);
+
+if(objCell != NULL && isInGen0(objCell))
+    objCell = gcEvacuate(objCell);
+
+if(lastCellCopied != NULL && isInGen0(lastCellCopied))
+    lastCellCopied = gcEvacuate(lastCellCopied);
+
+if(stringCell != NULL && isInGen0(stringCell))
+    stringCell = gcEvacuate(stringCell);
+
+/* 5b. Bytecode VM stack and active frames */
+gcEvacuateVMRoots();
+
+/* 6. Reset Gen 0 */
+gen0_ptr = gen0_start;
+++gen0_collections;
+}
+
+/* -------------- list/cell creation/deletion routines ---------------- */
+
 #ifndef NEWLISP64
 CELL * stuffInteger64(INT64 contents)
 {
 CELL * cell;
 
-if(firstFreeCell == NULL) allocBlock();
-cell = firstFreeCell;
-firstFreeCell = cell->next;
-++cellCount;
+if(gen0_ptr != NULL)
+    {
+    if(__builtin_expect(gen0_ptr >= gen0_limit, 0))
+        collectGen0(NULL);
+    cell = gen0_ptr++;
+    cell->type = CELL_INT64;
+    cell->next = nilCell;
+    cell->aux = (UINT)nilCell;
+    *(INT64 *)&cell->aux = contents;
+    return(cell);
+    }
 
-cell->type = CELL_INT64;
-cell->next = nilCell;
-
+cell = allocGen1Cell(CELL_INT64);
 *(INT64 *)&cell->aux = contents;
 return(cell);
 }
@@ -2161,17 +2432,19 @@ CELL * getCell(int type)
 {
 CELL * cell;
 
-if(firstFreeCell == NULL) allocBlock();
-cell = firstFreeCell;
-firstFreeCell = cell->next;
-++cellCount;
+if(gen0_ptr != NULL)
+    {
+    if(__builtin_expect(gen0_ptr >= gen0_limit, 0))
+        collectGen0(NULL);
+    cell = gen0_ptr++;
+    cell->type = type;
+    cell->next = nilCell;
+    cell->aux = (UINT)nilCell;
+    cell->contents = (UINT)nilCell;
+    return(cell);
+    }
 
-cell->type = type;
-cell->next = nilCell;
-cell->aux = (UINT)nilCell;
-cell->contents = (UINT)nilCell;
-
-return(cell);
+return(allocGen1Cell(type));
 }
 
 
@@ -2179,17 +2452,23 @@ CELL * makeCell(int type, UINT contents)
 {
 CELL * cell;
 
-if(firstFreeCell == NULL) allocBlock();
-cell = firstFreeCell;
-firstFreeCell = cell->next;
-++cellCount;
+if(gen0_ptr != NULL)
+    {
+    if(__builtin_expect(gen0_ptr >= gen0_limit, 0))
+        {
+        CELL * root = (CELL *)contents;
+        collectGen0(&root);
+        contents = (UINT)root;
+        }
+    cell = gen0_ptr++;
+    cell->type = type;
+    cell->next = nilCell;
+    cell->aux = (UINT)nilCell;
+    cell->contents = contents;
+    return(cell);
+    }
 
-cell->type = type;
-cell->next = nilCell;
-cell->aux = (UINT)nilCell;
-cell->contents = contents;
-
-return(cell);
+return(allocGen1CellWithContents(type, contents));
 }
 
 
@@ -2197,16 +2476,21 @@ CELL * makeStringCell(char * contents, size_t size)
 {
 CELL * cell;
 
-if(firstFreeCell == NULL) allocBlock();
-cell = firstFreeCell;
-firstFreeCell = cell->next;
-++cellCount;
+if(gen0_ptr != NULL)
+    {
+    if(__builtin_expect(gen0_ptr >= gen0_limit, 0))
+        collectGen0(NULL);
+    cell = gen0_ptr++;
+    cell->type = CELL_STRING;
+    cell->next = nilCell;
+    cell->aux = (UINT)size + 1;
+    cell->contents = (UINT)contents;
+    return(cell);
+    }
 
-cell->type = CELL_STRING;
-cell->next = nilCell;
+cell = allocGen1Cell(CELL_STRING);
 cell->aux = (UINT)size + 1;
 cell->contents = (UINT)contents;
-
 return(cell);
 }
 
@@ -2231,10 +2515,19 @@ CELL * list;
 UINT len;
 #endif
 
-if(firstFreeCell == NULL) allocBlock();
-newCell = firstFreeCell;
-firstFreeCell = newCell->next;
-++cellCount;
+if(gen0_ptr != NULL)
+    {
+    if(__builtin_expect(gen0_ptr >= gen0_limit, 0))
+        collectGen0(&cell);
+    newCell = gen0_ptr++;
+    }
+else
+    {
+    if(firstFreeCell == NULL) allocBlock();
+    newCell = firstFreeCell;
+    firstFreeCell = newCell->next;
+    ++cellCount;
+    }
 
 newCell->type = cell->type;
 newCell->next = nilCell;
@@ -2249,12 +2542,27 @@ if(isEnvelope(cell->type))
         {
         if(cell->contents != (UINT)nilCell) 
             {
+            BYTECODE_OBJ * bc = (cell->type == CELL_LAMBDA && cell->aux != 0 && cell->aux != (UINT)nilCell) ? (BYTECODE_OBJ *)cell->aux : NULL;
+            if(bc != NULL && bc->magic != BYTECODE_MAGIC) bc = NULL;
+            pushResult(newCell);
             newCell->contents = (UINT)copyCell((CELL *)cell->contents);
             list = (CELL *)newCell->contents;
             cell = (CELL *)cell->contents;
             while((cell = cell->next) != nilCell)
                 list = list->next = copyCell(cell);
-            newCell->aux = (UINT)list;  /* last element optimization */
+            if(newCell->type == CELL_LAMBDA)
+                {
+                if(bc != NULL)
+                    {
+                    newCell->aux = (UINT)bc;
+                    bc->ref_count++;
+                    }
+                else
+                    newCell->aux = (UINT)list;
+                }
+            else
+                newCell->aux = (UINT)list;  /* last element optimization */
+            popResult();
             }
         }
     }
@@ -2302,10 +2610,12 @@ CELL * newCell;
 #endif
 
 firstCell = newCell = copyCell(cell);
+pushResult(firstCell);
 
 while((cell = cell->next) != nilCell)
     newCell = newCell->next = copyCell(cell);
-    
+
+popResult();
 lastCellCopied = newCell;
 return(firstCell);
 }
@@ -2316,10 +2626,66 @@ void deleteList(CELL * cell)
 {
 CELL * next;
 
+if(cell == NULL) return;
+
 while(cell != nilCell)
     {
+    if(cell == NULL || cell == nilCell || cell == trueCell || cell->type == CELL_FREE || cell->type == CELL_FORWARD) 
+        {
+        if(cell == NULL) break;
+        cell = cell->next;
+        continue;
+        }
+
+    if(isInGen0(cell))
+        {
+        if(cell->type == CELL_STRING || cell->type == CELL_DYN_SYMBOL 
+#ifdef BIGINT
+            || cell->type == CELL_BIGINT
+#endif
+            )
+            {
+            if((void *)cell->contents != NULL)
+                {
+                freeMemory((void *)cell->contents);
+                cell->contents = 0;
+                }
+            }
+        else if(isEnvelope(cell->type))
+            {
+            if(cell->type == CELL_LAMBDA && cell->aux != 0 && cell->aux != (UINT)nilCell)
+                {
+                BYTECODE_OBJ * bc = (BYTECODE_OBJ *)cell->aux;
+                if(bc->magic == BYTECODE_MAGIC)
+                    {
+                    freeBytecodeObj(bc);
+                    cell->aux = (UINT)nilCell;
+                    }
+                }
+            if(cell->type == CELL_ARRAY)
+                deleteArray(cell);
+            else if((CELL *)cell->contents != nilCell)
+                deleteList((CELL *)cell->contents);
+            }
+
+        next = cell->next;
+        if(cell->type == CELL_SYMBOL || cell->type == CELL_CONTEXT)
+            cell->type = CELL_FREE;
+        cell = next;
+        continue;
+        }
+
     if(isEnvelope(cell->type))
         {
+        if(cell->type == CELL_LAMBDA && cell->aux != 0 && cell->aux != (UINT)nilCell)
+            {
+            BYTECODE_OBJ * bc = (BYTECODE_OBJ *)cell->aux;
+            if(bc->magic == BYTECODE_MAGIC)
+                {
+                freeBytecodeObj(bc);
+                cell->aux = (UINT)nilCell;
+                }
+            }
         if(cell->type == CELL_ARRAY)
             deleteArray(cell);
         else
@@ -2331,21 +2697,17 @@ while(cell != nilCell)
                 || cell->type == CELL_BIGINT
 #endif
             )
-        freeMemory( (void *)cell->contents);
-    
-    /* free cell changes in 10.6.3 */
-    if(cell == nilCell || cell == trueCell) 
-        cell = cell->next;
-    else    
         {
-        next = cell->next;
-        cell->type = CELL_FREE;
-        cell->next = firstFreeCell;
-        firstFreeCell = cell;
-        --cellCount;
-        cell = next;
+        if((void *)cell->contents != NULL)
+            freeMemory((void *)cell->contents);
         }
-
+    
+    next = cell->next;
+    cell->type = CELL_FREE;
+    cell->next = firstFreeCell;
+    firstFreeCell = cell;
+    --cellCount;
+    cell = next;
     }
 }
 
@@ -5018,6 +5380,13 @@ args->next = body;
 lambda = makeCell(cellType, (UINT)args);
 
 deleteList((CELL *)symbol->contents);
+lambda = gcEvacuate(lambda);
+if(cellType == CELL_LAMBDA)
+    {
+    BYTECODE_OBJ * bc = compileLambda(lambda, symbol);
+    if(bc != NULL)
+        lambda->aux = (UINT)bc;
+    }
 symbol->contents = (UINT)lambda;
 
 pushResultFlag = FALSE;
@@ -5202,6 +5571,7 @@ if(isProtected(symbol->flags))
 cell = copyCell(evaluateExpression(params));
 
 deleteList((CELL *)symbol->contents);
+cell = gcEvacuate(cell);
 symbol->contents = (UINT)(cell);
 
 symbolCheck = symbol;
@@ -5900,7 +6270,7 @@ return(cell->next);
 
 CELL * initIteratorIndex(void)
 {
-CELL * cell = stuffInteger(0);
+CELL * cell = allocGen1CellWithContents(CELL_LONG, 0);
 
 pushEnvironment(listIdxSymbol->contents);
 pushEnvironment(listIdxSymbol);

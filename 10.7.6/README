@@ -4,11 +4,17 @@ newLISP version 10.x.x for LINUX, FreeBSD, macOS Solaris and Windows
 
 INTRODUCTION
 ------------
-newLISP(tm) is LISP like scripting language for general programming
-artificial intelligence and statistics. 
+newLISP(tm) is a LISP-like scripting language for general programming,
+artificial intelligence, and statistics.
+
+This distribution incorporates a Direct-Threaded Bytecode Virtual Machine
+(nl-vm.c, nl-vm.h) and a 64 MB Gen 0 Nursery Generational Garbage Collector
+(newlisp.c, newlisp.h). See 'README.md' and 'doc/ARCHITECTURE.md' for detailed
+performance benchmarks comparing against Python 3.12, architecture analysis,
+and documentation.
 
 For more details about newLISP see the Users Manual and Reference in the
-distribution file: 'doc/newlisp_manual.html' 
+distribution file: 'doc/newlisp_manual.html' or 'README.md'. 
 
 Code contributions, bug fixes, reports and comments are welcome. New
 versions are available at:

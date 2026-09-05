@@ -2441,23 +2441,24 @@ are used to define fopen(), fclose(), fprintf(), fgetc() and fgets() in some *.c
 
 FILE * win_fdopen(int handle, const char * mode)
 {
-FILE * fPtr;
+WIN_SOCKET_WRAPPER * fPtr;
 
-if((fPtr = (FILE *)malloc(sizeof(FILE))) == NULL)
+if((fPtr = (WIN_SOCKET_WRAPPER *)malloc(sizeof(WIN_SOCKET_WRAPPER))) == NULL)
     return(NULL);
 
-memset(fPtr, 0, sizeof(FILE));
+fPtr->handle = handle;
 
-fPtr->_file = handle;
-fPtr->_flag = 0xFFFF;
-
-return(fPtr);
+return((FILE *)fPtr);
 }
 
 int win_fclose(FILE * fPtr)
 {
 if(IOchannelIsSocketStream)
-   return(close(getSocket(fPtr)));
+   {
+   int res = close(getSocket(fPtr));
+   free(fPtr);
+   return(res);
+   }
 
 return(fclose(fPtr));
 }

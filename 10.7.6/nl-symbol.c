@@ -462,6 +462,30 @@ while(blockPtr != NULL)
     blockPtr = blockPtr->next;
     }
 
+if(gen0_start != NULL && gen0_ptr != NULL)
+    {
+    CELL * cPtr = gen0_start;
+    while(cPtr < gen0_ptr)
+        {
+        if( (cPtr->contents == (UINT)sPtr &&
+            (*(UINT *)cPtr == CELL_SYMBOL || *(UINT *)cPtr == CELL_CONTEXT))
+            ||
+            ( *(UINT *)cPtr == CELL_DYN_SYMBOL && cPtr->aux == (UINT)sPtr ) )
+            {
+            count++;
+            if(replaceFlag)
+                {
+                cPtr->type = CELL_SYMBOL;
+                cPtr->aux = (UINT)nilCell;  
+                if(*(UINT *)cPtr == CELL_DYN_SYMBOL) 
+                    free((void *)cPtr->contents);
+                cPtr->contents = (UINT)nilSymbol;
+                }
+            }
+        cPtr++;
+        }
+    }
+
 return(count);
 }
 
@@ -496,6 +520,30 @@ while(blockPtr != NULL)
     blockPtr = blockPtr->next;
     }
 
+if(gen0_start != NULL && gen0_ptr != NULL)
+    {
+    CELL * cPtr = gen0_start;
+    while(cPtr < gen0_ptr)
+        {
+        if(cPtr->type == CELL_SYMBOL)
+            {
+            sPtr = (SYMBOL *)cPtr->contents;
+            if(sPtr->context == contextPtr)     
+                {
+                count++;
+                if(replaceFlag) 
+                    cPtr->contents = (UINT)nilSymbol;
+                }
+            }
+        if(cPtr->type == CELL_CONTEXT)
+            {
+            if((SYMBOL *)cPtr->contents == contextPtr)
+                count++;
+            }
+        cPtr++;
+        }
+    }
+
 return(count);
 }
 
@@ -521,6 +569,24 @@ while(blockPtr != NULL)
         blockPtr++;
         }
     blockPtr = blockPtr->next;
+    }
+
+if(gen0_start != NULL && gen0_ptr != NULL)
+    {
+    CELL * cPtr = gen0_start;
+    while(cPtr < gen0_ptr)
+        {
+        if (cPtr->type == CELL_CONTEXT)
+            {
+            if((SYMBOL *)cPtr->contents == contextPtr)
+                {
+                cPtr->type = CELL_NIL;
+                cPtr->contents = (UINT)nilCell;
+                cPtr->aux = (UINT)nilCell;
+                }
+            }
+        cPtr++;
+        }
     }
 }
 

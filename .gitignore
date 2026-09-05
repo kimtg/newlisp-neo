@@ -1,3 +1,44 @@
+# Compiled Object Files
+*.o
+*.obj
+
+# Executables and Libraries
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+newlisp
+
+# Debug and Symbol Files
+*.pdb
+*.ilk
+*.idb
+*.dSYM/
+
+# Build and Configuration Artifacts
+makefile_build
+junk
+*.tmp
+*.log
+qa_out.txt
+qa-dot-test
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating System & Editor Files
 .DS_Store
 .DS_Store?
 **/.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/

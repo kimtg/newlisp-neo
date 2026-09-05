@@ -3,9 +3,9 @@
 
 OBJS = newlisp.o nl-symbol.o nl-math.o nl-list.o nl-liststr.o nl-string.o nl-filesys.o \
 	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o pcre.o  \
-	nl-utf8.o win-util.o win-path.o
+	nl-utf8.o win-util.o win-path.o nl-vm.o
 
-CFLAGS = -m64 -Wall -c -O1 -g -DNEWLISP64 -DWINDOWS -DSUPPORT_UTF8 
+CFLAGS = -m64 -Wall -c -O3 -fno-strict-aliasing -DNEWLISP64 -DWINDOWS -DSUPPORT_UTF8 
 
 CC = gcc
 STRIP = strip
@@ -17,6 +17,6 @@ default: $(OBJS)
 .c.o:
 	$(CC) $(CFLAGS) $<
 
-$(OBJS): primes.h protos.h newlisp.h makefile_mingw64_utf8
+$(OBJS): primes.h protos.h newlisp.h nl-vm.h makefile_mingw64_utf8
 
 

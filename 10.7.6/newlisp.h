@@ -264,7 +264,10 @@ This is for 64bit large file support (LFS),
 #define LITTLE_ENDIAN
 #define LINE_FEED "\r\n"
 #define LINE_FEED_LEN 2
-#define getSocket(A) ((A)->_file)
+typedef struct {
+    int handle;
+} WIN_SOCKET_WRAPPER;
+#define getSocket(A) (((WIN_SOCKET_WRAPPER*)(A))->handle)
 #define setenv my_setenv
 #define random rand
 #define srandom srand
@@ -429,6 +432,7 @@ This is for 64bit large file support (LFS),
 #define CELL_FEXPR (13 | ENVELOPE_TYPE_MASK | LIST_TYPE_MASK | EVAL_SELF_TYPE_MASK)
 #define CELL_ARRAY (14 | ENVELOPE_TYPE_MASK | EVAL_SELF_TYPE_MASK)
 #define CELL_DYN_SYMBOL (15 | SYMBOL_TYPE_MASK)
+#define CELL_FORWARD 0x10000
 #define CELL_FREE 0xFF
 
 /* cell type classes */
@@ -739,6 +743,41 @@ extern int prettyPrintFlags;
 extern char lc_decimal_point;
 extern CELL * xmlTags;
 extern CELL * xmlCallback;
+
+/* Generational Garbage Collector */
+extern CELL * gen0_start;
+extern CELL * gen0_ptr;
+extern CELL * gen0_limit;
+extern UINT gen0_collections;
+
+#define isInGen0(c) ((CELL*)(c) >= gen0_start && (CELL*)(c) < gen0_limit)
+
+void initGenerationalGC(void);
+void collectGen0(CELL ** extraRoot);
+CELL * allocGen1Cell(int type);
+CELL * allocGen1CellWithContents(int type, UINT contents);
+CELL * gcEvacuate(CELL * cell);
+
+static inline CELL * stuffInteger(UINT contents)
+{
+    CELL * cell;
+    if(__builtin_expect(gen0_ptr != NULL, 1))
+    {
+        if(__builtin_expect(gen0_ptr >= gen0_limit, 0))
+            collectGen0(NULL);
+        cell = gen0_ptr++;
+        cell->type = CELL_LONG;
+        cell->next = nilCell;
+        cell->aux = (UINT)nilCell;
+        cell->contents = contents;
+        return(cell);
+    }
+
+    return(allocGen1CellWithContents(CELL_LONG, contents));
+}
+
+#include "nl-vm.h"
+
 /* end of file */
 
 #endif /* NEWLISP_H */
