@@ -78,7 +78,7 @@ tt {
 <blockquote>
 <center><h2>Expression evaluation, Implicit Indexing, Contexts and Default Functors in the newLISP Scripting Language</h2></center>
 <center>
-<font size="-1">Lutz Mueller, 2007-2018. Last edit July 26th 2018<br/></font>
+<font size="-1">Lutz Mueller, 2007-2018. Updated for newLISP Neo (Direct-Threaded Bytecode VM &amp; Generational GC), 2026<br/></font>
 </center>
 
 <center><blockquote><blockquote><i>
@@ -139,7 +139,10 @@ function evaluateExpression(expr)
 
 <p>Traditional Lisp or Scheme only permit a built-in function, operator or user defined lambda expression in the first, functor position of the s-expression list for evaluation. In newLISP the context symbol type, list, array and number type also act as functions when in the functor position.</p>
 
-<p>Built-in functions are evaluated calling <i>evaluateFunc(func, args)</i>, functors which are lambda expressions call the <i>evaluateLambda(func, args)</i> function. Both functions in turn will call <i>evaluateExpression(expr)</i> again for evaluation of function arguments.</p>
+<p>Built-in functions are evaluated calling <i>evaluateFunc(func, args)</i>, while functors that are lambda expressions call the <i>evaluateLambda(func, args)</i> function. Both functions in turn will call <i>evaluateExpression(expr)</i> again for evaluation of function arguments.</p>
+
+<p><b>Acceleration via the Direct-Threaded Bytecode Virtual Machine:</b><br/>
+In newLISP Neo, <tt>evaluateLambda(func, args)</tt> incorporates JIT-style bytecode acceleration (<tt>nl-vm.c</tt>). Pure lambda expressions are compiled to linear bytecode objects (<tt>BYTECODE_OBJ</tt>) and executed via computed-goto direct threading (<tt>&amp;&amp;label</tt>) across a flat non-recursive frame stack (<tt>vm_frames</tt>), eliminating C recursion overhead and branch mispredictions. If an expression requires dynamic scoping manipulation or uncompiled constructs, it transparently falls back to the classic AST tree-walker.</p>
 
 <p>The working of a context symbol in the functor position of an s-expression will be explained further down in the chapter about <i>namespaces and default functors</i>.</p>
 
@@ -471,14 +474,18 @@ associative key &rarr; value access:</p>
 </pre></blockquote>
 
 <h3>References</h3>
-[1] <i>Lutz Mueller</i>, 2004-2015<br /> 
-<a href="http://newlisp.org/MemoryManagement.html">Automatic Memory Management in newLISP</a>.
+[1] <i>Lutz Mueller</i>, 2004-2015; updated 2026<br /> 
+<a href="MemoryManagement.html">Automatic Memory Management in newLISP Neo</a>.
 <br /><br />
 
 [2] <i>John McCarthy</i>, 1960<br />
 <a href="http://www-formal.stanford.edu/jmc/recursive.html">Recursive Functions of Symbolic Expressions and their Computation by Machine</a>.
 <br /><br />
-<center><font size="-1">Copyright &copy; 2007-2018, Lutz Mueller 
+
+[3] <i>newLISP Neo Architecture</i>, 2026<br />
+<a href="ARCHITECTURE.md">Direct-Threaded Bytecode Virtual Machine and Generational GC</a>.
+<br /><br />
+<center><font size="-1">Copyright &copy; 2007-2018, Lutz Mueller. Updates for newLISP Neo &copy; 2026. 
 <a href="http://newlisp.org">http://newlisp.org</a>. All rights reserved. </font></center>
 </blockquote>
 </body>

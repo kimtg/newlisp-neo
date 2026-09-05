@@ -3,7 +3,7 @@ newlisp(1)                  Commandline Parameters                  newlisp(1)
 
 
 NAME
-       newlisp - lisp like programming language
+       newlisp - lisp-like programming language with direct-threaded VM and generational GC
 
 SYNOPSIS
        newlisp  [-n]  [-x  source  target]  [-h  |  -v]  [-c | -C | -http] [-t
@@ -20,7 +20,9 @@ DESCRIPTION
        to  specify  these before the source files to be loaded. If a -e switch
        is used the programtext is evaluated and then newlisp  exits  otherwise
        evaluation  continues  interactively  (unless  an  exit  occurs  during
-       lisp-file interpretation).
+       lisp-file interpretation). In newLISP Neo, pure lambda expressions are
+       automatically compiled and executed by an integrated direct-threaded
+       bytecode virtual machine with generational garbage collection.
 
 OPTIONS
        -n     Suppress loading of any  init.lsp  or  .init.lsp  initialization
@@ -162,11 +164,11 @@ EXIT STATUS
        case of abnormal exit.
 
 AUTHOR
-       Lutz Mueller <lutz@nuevatec.com>
+       Lutz Mueller <lutz@nuevatec.com>. Modernized for newLISP Neo (2026).
 
        http://www.newlisp.org/ - the newLISP home page
 
 
 
-version 10.6.0                    April 2014                        newlisp(1)
+version newLISP Neo               2026                                 newlisp(1)
 
