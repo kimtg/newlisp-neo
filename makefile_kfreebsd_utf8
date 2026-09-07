@@ -2,11 +2,11 @@
 #
 
 OBJS = newlisp.o nl-symbol.o nl-math.o nl-list.o nl-liststr.o nl-string.o nl-filesys.o \
-	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o nl-utf8.o pcre.o
+	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o nl-utf8.o pcre.o nl-vm.o
 
-DEFAULT_CFLAGS = -m32 -Wall -Wno-uninitialized -fno-strict-aliasing -O2 -c -g -DREADLINE -DKFREEBSD -DSUPPORT_UTF8 $(CFLAGS)
+DEFAULT_CFLAGS = -m32 -Wall -Wno-uninitialized -fno-strict-aliasing -O3 -c -g -DREADLINE -DKFREEBSD -DSUPPORT_UTF8 $(CFLAGS)
 # or without readline lib
-#CFLAGS = -Wall -Wno-uninitialized -fno-strict-aliasing -O2 -c -g -DKFREEBSD -DSUPPORT_UTF8
+#CFLAGS = -Wall -Wno-uninitialized -fno-strict-aliasing -O3 -c -g -DKFREEBSD -DSUPPORT_UTF8
 
 CC = cc
 

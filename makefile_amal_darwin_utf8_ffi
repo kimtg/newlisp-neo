@@ -7,9 +7,9 @@
 #
 
 
-OBJS = newlisp-amal.o pcre.o
+OBJS = newlisp-amal.o pcre.o nl-vm.o
 
-CFLAGS = -Wall -m32 -O1 -I/usr/include -c -DREADLINE -DMAC_OSX -DSUPPORT_UTF8 -DFFI
+CFLAGS = -Wall -m32 -O3 -I/usr/include -c -DREADLINE -DMAC_OSX -DSUPPORT_UTF8 -DFFI
 
 CC = gcc
 

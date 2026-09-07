@@ -4,9 +4,9 @@
 # 
 
 OBJS = newlisp.o nl-symbol.o nl-math.o nl-list.o nl-liststr.o nl-string.o nl-filesys.o \
-	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o nl-utf8.o pcre.o unix-lib.o
+	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o nl-utf8.o pcre.o nl-vm.o unix-lib.o
 
-CFLAGS = -m32 -Wall -Wno-uninitialized -Wno-strict-aliasing -Wno-long-long -c -O2 -DLIBRARY -DSUPPORT_UTF8 -DLINUX
+CFLAGS = -m32 -Wall -Wno-uninitialized -Wno-strict-aliasing -Wno-long-long -c -O3 -DLIBRARY -DSUPPORT_UTF8 -DLINUX
 
 CC = gcc
 

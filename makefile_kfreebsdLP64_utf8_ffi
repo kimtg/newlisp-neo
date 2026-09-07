@@ -2,13 +2,13 @@
 # and with <libffi support
 
 OBJS = newlisp.o nl-symbol.o nl-math.o nl-list.o nl-liststr.o nl-string.o nl-filesys.o \
-	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o nl-utf8.o pcre.o
+	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o nl-utf8.o pcre.o nl-vm.o
 
 # the option -fno-strict-aliasing may not be available on some BSD versions 
-DEFAULT_CFLAGS = -m64 -Wall -fno-strict-aliasing -O2 -c -g -DREADLINE -DNEWLISP64 -DSUPPORT_UTF8 -DKFREEBSD -DFFI $(CFLAGS)
+DEFAULT_CFLAGS = -m64 -Wall -fno-strict-aliasing -O3 -c -g -DREADLINE -DNEWLISP64 -DSUPPORT_UTF8 -DKFREEBSD -DFFI $(CFLAGS)
 
 # or without readline lib and libffi
-#CFLAGS = -Wall -Wno-strict-aliasing -O2 -c -g -DNEWLISP64 -DKFREEBSD
+#CFLAGS = -Wall -Wno-strict-aliasing -O3 -c -g -DNEWLISP64 -DKFREEBSD
 
 CC = cc
 

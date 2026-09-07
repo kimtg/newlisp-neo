@@ -3,10 +3,10 @@
 #
 
 OBJS = newlisp.o nl-symbol.o nl-math.o nl-list.o nl-liststr.o nl-string.o nl-filesys.o \
-	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o pcre.o
+	nl-sock.o nl-import.o nl-xml-json.o nl-web.o nl-matrix.o nl-debug.o pcre.o nl-vm.o
 
-CFLAGS = -Wall -pedantic -Wno-uninitialized -Wno-strict-aliasing -Wno-long-long -c -O2 -s -DREADLINE -DOS2
-#CFLAGS = -Wall -pedantic -Wno-uninitialized -Wno-strict-aliasing -Wno-long-long -c -O2 -s -DOS2
+CFLAGS = -Wall -pedantic -Wno-uninitialized -Wno-strict-aliasing -Wno-long-long -c -O3 -s -DREADLINE -DOS2
+#CFLAGS = -Wall -pedantic -Wno-uninitialized -Wno-strict-aliasing -Wno-long-long -c -O3 -s -DOS2
 
 CC = gcc
 
