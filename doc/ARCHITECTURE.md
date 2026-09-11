@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-This document describes the design, implementation, and safety mechanisms of the high-performance execution engine introduced to newLISP (v10.7.6).
+This document describes the design, implementation, and safety mechanisms of the high-performance execution engine introduced to newLISP Neo.
 
 The enhanced engine combines two core architectural pillars:
 1. **Direct-Threaded Bytecode Virtual Machine (`nl-vm.c`, `nl-vm.h`)**: Compiles lambda abstract syntax trees (ASTs) into compact linear bytecode executed by a computed-goto dispatch loop, eliminating tree-walking overhead and C stack recursion.
@@ -28,7 +28,7 @@ flowchart TD
     end
 
     subgraph MemoryManagement [newlisp.c: Generational GC]
-        Gen0["Gen 0 Nursery (64 MB Arena)"] -->|O(1) Bump Pointer| FastAlloc["stuffInteger, makeCell, copyCell"]
+        Gen0["Gen 0 Nursery (64 MB Arena)"] --> |"O(1)" Bump Pointer| FastAlloc["stuffInteger, makeCell, copyCell"]
         FastAlloc --> Cheney["Cheney Evacuation (gcEvacuate)"]
         Cheney --> Gen1["Gen 1 Tenured Heap"]
     end
