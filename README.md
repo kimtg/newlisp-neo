@@ -195,6 +195,8 @@ make testall
 
 ## License & Credits
 
+- Copyright (C) 2020 Lutz Mueller
+- Copyright (C) 2026 KIM Taegyoon
 - **newLISP** was originally designed and implemented by **Lutz Mueller** ([Nuevatec](http://www.newlisp.org)).
 - **newLISP Neo** is released under the [GNU General Public License Version 3 (GPLv3)](LICENSE). See [`LICENSE`](LICENSE) or [`doc/COPYING.txt`](doc/COPYING.txt) for the complete license text.
 - Documentation files are distributed under the GNU Free Documentation License (GFDL).
