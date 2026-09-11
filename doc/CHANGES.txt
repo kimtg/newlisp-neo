@@ -7270,7 +7270,7 @@ Dec 6, 2009
 
    fixed struct return error nl-import.c line 814
  
-10.8.0-vm / Performance Overhaul
+10.7.6-VM / Performance Overhaul
 
    Implemented Direct-Threaded Bytecode Virtual Machine (nl-vm.c, nl-vm.h):
    - Compiles pure newLISP lambda expressions to compact linear bytecode.
