@@ -7293,7 +7293,7 @@ Dec 6, 2009
      last-element list pointer optimization in cell->aux from invalid free calls.
    - 100% backward compatibility: 396/396 built-in primitives and all scoping/context
      tests pass in qa-dot (exit code 0, 0 errors).
-   - Benchmark: fib(30) runs in 101.5 ms (13.1x faster than original newLISP,
-     1.84x faster than Python 3.12).
-   - Benchmark: 1M loop runs in 60.9 ms (6.2x faster than original newLISP,
-     1.29x faster than Python 3.12).
+   - Benchmark: fib(30) runs in 42.6 ms (13.9x faster than original newLISP,
+     2.02x faster than Python 3.14, 4.38x faster than Python 3.12).
+   - Benchmark: 1M loop runs in 31.3 ms (6.1x faster than original newLISP,
+     1.19x faster than Python 3.14, 2.51x faster than Python 3.12).

@@ -165,20 +165,21 @@ All subsystems touching `cell->aux` adhere to this contract:
 
 ---
 
-## 5. Empirical Benchmarks vs. Python 3.12
+## 5. Empirical Benchmarks vs. Python 3.14 (and Python 3.12)
 
-Benchmarks were performed on a Windows x86_64 host (Intel Core i7, 16 GB RAM) comparing:
+Benchmarks were performed on a Windows x86_64 host comparing:
 - **newLISP 10.7.6 Baseline**: Standard ORO tree-walker.
 - **CPython 3.12.3**: Standard Python virtual machine.
-- **newLISP with Bytecode VM + GenGC**: This optimized implementation.
+- **CPython 3.14.4**: Modern Python virtual machine with specialized adaptive interpreter.
+- **newLISP Neo with Bytecode VM + GenGC**: This optimized implementation.
 
 ### 5.1 Benchmark Results Summary
 
-| Benchmark | Baseline newLISP | Python 3.12 | Optimized newLISP | vs. Baseline | vs. Python 3.12 |
-|---|---|---|---|---|---|
-| **Recursive Fibonacci `(fib 30)`** | 1,326.0 ms | 186.9 ms | **101.5 ms** | **13.1x faster** | **1.84x faster** |
-| **1M Iteration While Loop** | 375.4 ms | 78.8 ms | **60.9 ms** | **6.16x faster** | **1.29x faster** |
-| **Full Regression Suite (`qa-dot`)** | 9,410 ms | N/A | **8,451 ms** | **1.11x faster** | **100% Passing (0 failures)** |
+| Benchmark | Baseline newLISP | Python 3.12 | Python 3.14 | newLISP Neo | vs. Python 3.14 | vs. Baseline |
+|---|---|---|---|---|---|---|
+| **Recursive Fibonacci `(fib 30)`** | 592.5 ms | 186.9 ms | 86.0 ms | **42.6 ms** | **2.02x faster** | **13.9x faster** |
+| **1M Iteration While Loop** | 190.2 ms | 78.8 ms | 37.2 ms | **31.3 ms** | **1.19x faster** | **6.08x faster** |
+| **Full Regression Suite (`qa-dot`)** | 9,410 ms | N/A | N/A | **7,377 ms** | **N/A** | **100% Passing (0 failures)** |
 
 ### 5.2 How to Reproduce
 
@@ -194,23 +195,7 @@ Execute the test and benchmark scripts from the repository root:
 # Run iterative while loop benchmark
 .\newlisp.exe bench_loop.lsp
 
-# Compare with Python 3.12
-python -c "
-import time
-
-def fib(n):
-    return n if n < 2 else fib(n-1) + fib(n-2)
-
-t0 = time.perf_counter(); fib(30); t1 = time.perf_counter()
-print(f'Python fib(30): {(t1-t0)*1000:.2f} ms')
-
-def loop_test(n):
-    s = i = 0
-    while i < n: s += i; i += 1
-    return s
-
-t0 = time.perf_counter(); loop_test(1_000_000); t1 = time.perf_counter()
-print(f'Python loop 1M: {(t1-t0)*1000:.2f} ms')
-"
+# Run Python 3.14 benchmark
+python bench.py
 ```
 

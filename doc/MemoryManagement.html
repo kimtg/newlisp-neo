@@ -232,29 +232,32 @@ GenGC does not replace ORO; it supercharges it. The ORO result stack remains the
 newLISP lists utilize an internal optimization where <tt>cell-&gt;aux</tt> stores a pointer to the last element of the list for $O(1)$ append operations. To allow pure compiled lambda expressions to be wrapped as linear bytecode objects while maintaining transparent list operations, bytecode handles are tagged with <tt>BYTECODE_MAGIC</tt> (<tt>0xBEEC0DE0</tt>) in <tt>cell-&gt;aux</tt>. This guarantees that both the GC root scanner and list manipulation primitives distinguish bytecode payloads from ordinary list end-pointers, avoiding memory corruption or invalid deallocations.</p>
 
 <p><b>5. Empirical Performance Comparison:</b><br/>
-The synergy between the Gen 0 bump nursery and the direct-threaded bytecode VM yields dramatic performance improvements, outperforming both classic newLISP and CPython 3.12:</p>
+The synergy between the Gen 0 bump nursery and the direct-threaded bytecode VM yields dramatic performance improvements, outperforming both classic newLISP and modern Python (CPython 3.14 &amp; 3.12):</p>
 
 <table border="1" cellpadding="4">
 <tr>
 <th>Benchmark Kernel</th>
 <th>Original newLISP 10.7.6 (Tree-Walker)</th>
-<th>CPython 3.12.3 (Standard VM)</th>
+<th>CPython 3.12</th>
+<th>CPython 3.14</th>
 <th>newLISP Neo (GenGC + VM)</th>
-<th>Speedup vs Original</th>
+<th>Speedup vs Python 3.14</th>
 </tr>
 <tr>
 <td><b>Recursive (fib 30)</b></td>
-<td>1,326.0 ms</td>
+<td>592.5 ms</td>
 <td>186.9 ms</td>
-<td><b>101.5 ms</b></td>
-<td><b>13.1x faster</b> (1.84x faster than Python)</td>
+<td>86.0 ms</td>
+<td><b>42.6 ms</b></td>
+<td><b>2.02x faster</b> (13.9x vs original)</td>
 </tr>
 <tr>
 <td><b>1M While Loop</b></td>
-<td>375.4 ms</td>
+<td>190.2 ms</td>
 <td>78.8 ms</td>
-<td><b>60.9 ms</b></td>
-<td><b>6.16x faster</b> (1.29x faster than Python)</td>
+<td>37.2 ms</td>
+<td><b>31.3 ms</b></td>
+<td><b>1.19x faster</b> (6.08x vs original)</td>
 </tr>
 </table>
 

@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Regression Tests](https://img.shields.io/badge/qa--dot-100%25%20Passing-brightgreen.svg)](qa-dot)
-[![Speed vs Python](https://img.shields.io/badge/Speed%20vs%20Python%203.12-1.84x%20Faster-orange.svg)](#performance-benchmarks-newlisp-neo-vs-python-312)
+[![Speed vs Python](https://img.shields.io/badge/Speed%20vs%20Python%203.14-2.02x%20Faster-orange.svg)](#performance-benchmarks-newlisp-neo-vs-python-314)
 
 **newLISP Neo** is a modernized, high-performance distribution of [newLISP](http://www.newlisp.org) — an elegant, lightweight, LISP-like scripting language originally created by **Lutz Mueller** for general programming, artificial intelligence, data manipulation, and statistical computing.
 
@@ -29,7 +29,7 @@ This enhanced release overhauls the newLISP engine with a **Direct-Threaded Byte
 
 ---
 
-## Performance Benchmarks: newLISP Neo vs. Python 3.12
+## Performance Benchmarks: newLISP Neo vs. Python 3.14
 
 All benchmarks were evaluated under identical conditions on a Windows x86_64 host.
 
@@ -43,7 +43,7 @@ Lisp code ([`bench_fib.lsp`](bench_fib.lsp)):
       (+ (fib (- n 1)) (fib (- n 2)))))
 ```
 
-Python 3.12 reference code:
+Python reference code ([`bench.py`](bench.py)):
 ```python
 def fib(n):
     if n < 2:
@@ -51,11 +51,12 @@ def fib(n):
     return fib(n - 1) + fib(n - 2)
 ```
 
-| Runtime Engine | Execution Time | Speedup vs Original newLISP | Comparison vs Python 3.12 |
+| Runtime Engine | Execution Time | Speedup vs Original newLISP | Comparison vs Python 3.14 |
 |---|---|---|---|
-| **Original newLISP 10.7.6** (Tree-Walker) | 1,326.0 ms | 1.00x | 7.10x slower |
-| **CPython 3.12.3** (Standard Python VM) | 186.9 ms | 7.10x faster | 1.00x (baseline) |
-| **newLISP Neo** (Direct-Threaded VM + GenGC) | **101.5 ms** | **13.1x faster** | **1.84x FASTER than Python** |
+| **Original newLISP 10.7.6** (Tree-Walker) | 592.5 ms | 1.00x | 6.89x slower |
+| **CPython 3.12.3** (Standard Python VM) | 186.9 ms | 3.17x faster | 2.17x slower |
+| **CPython 3.14.4** (Optimized Python VM) | 86.0 ms | 6.89x faster | 1.00x (baseline) |
+| **newLISP Neo** (Direct-Threaded VM + GenGC) | **42.6 ms** | **13.9x faster** | **2.02x FASTER than Python 3.14** |
 
 ---
 
@@ -71,7 +72,7 @@ Lisp code ([`bench_loop.lsp`](bench_loop.lsp)):
     s))
 ```
 
-Python 3.12 reference code:
+Python reference code ([`bench.py`](bench.py)):
 ```python
 def loop_test(n):
     s = 0
@@ -82,11 +83,12 @@ def loop_test(n):
     return s
 ```
 
-| Runtime Engine | Execution Time | Speedup vs Original newLISP | Comparison vs Python 3.12 |
+| Runtime Engine | Execution Time | Speedup vs Original newLISP | Comparison vs Python 3.14 |
 |---|---|---|---|
-| **Original newLISP 10.7.6** (Tree-Walker) | 375.4 ms | 1.00x | 4.76x slower |
-| **CPython 3.12.3** (Standard Python VM) | 78.8 ms | 4.76x faster | 1.00x (baseline) |
-| **newLISP Neo** (Direct-Threaded VM + GenGC) | **60.9 ms** | **6.16x faster** | **1.29x FASTER than Python** |
+| **Original newLISP 10.7.6** (Tree-Walker) | 190.2 ms | 1.00x | 5.11x slower |
+| **CPython 3.12.3** (Standard Python VM) | 78.8 ms | 2.41x faster | 2.12x slower |
+| **CPython 3.14.4** (Optimized Python VM) | 37.2 ms | 5.11x faster | 1.00x (baseline) |
+| **newLISP Neo** (Direct-Threaded VM + GenGC) | **31.3 ms** | **6.08x faster** | **1.19x FASTER than Python 3.14** |
 
 ---
 
@@ -98,7 +100,10 @@ def loop_test(n):
 
 ### Build on Windows (MinGW-w64)
 ```powershell
-# In PowerShell / Command Prompt with MinGW-w64 in PATH:
+# Batch file (with MinGW-w64 in PATH):
+.\make.bat
+
+# Or build with a specific makefile:
 mingw32-make -f makefile_mingw64_utf8
 ```
 
@@ -155,6 +160,7 @@ make testall
 ```bash
 ./newlisp bench_fib.lsp
 ./newlisp bench_loop.lsp
+python bench.py
 ```
 
 ---
@@ -170,6 +176,7 @@ make testall
 ├── makefile_*                # Cross-platform build definitions for Linux, macOS, BSD, Win32/64
 ├── bench_fib.lsp             # Recursive Fibonacci benchmark harness
 ├── bench_loop.lsp            # Arithmetic loop benchmark harness
+├── bench.py                  # Python 3.14 benchmark comparison harness
 ├── qa-dot / qa-comma         # Complete language regression test suites
 ├── modules/                  # Standard library modules (crypto, sqlite3, stat, etc.)
 ├── examples/                 # Sample applications and scripts
