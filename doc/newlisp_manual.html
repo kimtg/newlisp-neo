@@ -539,29 +539,24 @@ integers. This makes the GNU GMP module <tt>gmp.lsp</tt> obsolete.</p>
 <a name="REPL"></a>
 <h2>3. Interactive Lisp mode</h2>
 <p>The best way to experience Lisp and experiment with it, is using interactive 
-mode in a terminal window or operating system command shell. Since version 10.3, 
-newLISP's read-eval-print-loop (REPL) accepts multi-line statements.</p>
+mode in a terminal window or operating system command shell. 
+newLISP's read-eval-print-loop (REPL) automatically accepts multi-line statements.</p>
 
-<p>To enter a multi-line statement hit the [enter] key on an empty line after
-the system prompt. To exit multi-line mode, hit the [enter] key again on an empty
-line. In the following example computer output is shown in bold letters:</p>
+<p>When an entered expression has unclosed parentheses, braces, quotes, or text tags, 
+the REPL automatically accepts continuation lines until the expression is complete, 
+and then evaluates it immediately. In the following example computer output is shown in bold letters:</p>
 
 <pre>
-<b>></b> 
-(define (foo x y)
+<b>></b> (define (foo x y)
     (+ x y))
-
 <b>(lambda (x y) (+ x y))
 ></b> (foo 3 4)
 <b>7
 ></b> 
 </pre>
 
-<p>Note, that multi-line mode is only possible in an OS command terminal window
-or command shell.</p>
-
-<p>Interactive Lisp mode can accept operating system shell commands. To hit
-an OS command enter the '<tt>!</tt>' character right after the prompt, immediately
+<p>Interactive Lisp mode can accept operating system shell commands. To run
+an OS command enter the '<tt>!</tt>' character right after the prompt, 
 followed by the shell command:</p>
 
 <pre>
@@ -1456,28 +1451,21 @@ mode on the command-line.</p>
 <a name="multiline"></a>
 <h3>Interactive multiline expressions</h3>
 
-<p>Multiline expressions can be entered by entering an empty line first. 
-Once in multiline mode, another empty line returns from entry mode 
-and evaluates the statement(s) entered (ouput in boldface):</p>
+<p>Multiline expressions are accepted automatically: when an expression has unclosed 
+parentheses, braces, or strings, the prompt is suppressed on continuation lines until 
+all brackets are balanced. The statement is then evaluated immediately (output in boldface):</p>
 
 <pre>
-&gt;
-(define (foo x y)
+&gt; (define (foo x y)
     (+ x y))
-
 <b>(lambda (x y) (+ x y))</b>
 &gt; (foo 3 4)
 <b>7</b>
 &gt; _
 </pre>		
 
-<p>Entering multiline mode by hitting the enter key on an empty line 
-suppresses the prompt. Entering another empty line will leave the multiline 
-mode and evaluate expressions.</p>
-
-<p>As an alternativo to entering empty lines, the <tt>[cmd]</tt> and 
-<tt>[/cmd]</tt> tags are used, each entered on separate lines. This mode is 
-used by some interactive IDEs controlling newLISP and internally by the 
+<p>Additionally, the <tt>[cmd]</tt> and <tt>[/cmd]</tt> tags can be used, each entered on 
+separate lines. This mode is used by some interactive IDEs controlling newLISP and internally by the 
 <a href="#net-eval">net-eval</a> function.</p>
 
 <br/>

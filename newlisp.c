@@ -680,6 +680,8 @@ return(argList);
 }
 
 char * getCommandLine(int batchMode, int * length);
+int isExpressionIncomplete(const char * str);
+STREAM replMultiStream = {NULL, NULL, 0, 0, 0};
     
 int main(int argc, char * argv[])
 {
@@ -978,6 +980,25 @@ while(TRUE)
         continue;
         }
 
+    {
+    char * p = command;
+    while(*p == ' ' || *p == '\t') p++;
+    if(*p != '!' && strncmp(p, "[cmd]", 5) != 0 && isExpressionIncomplete(command))
+        {
+        openStrStream(&replMultiStream, 1024, TRUE);
+        writeStreamStr(&replMultiStream, command, 0);
+        while(isExpressionIncomplete(replMultiStream.buffer))
+            {
+            if(fgets(command, MAX_COMMAND_LINE - 1, IOchannel) == NULL)
+                break;
+            writeStreamStr(&replMultiStream, command, 0);
+            }
+        executeCommandLine(replMultiStream.buffer, OUT_CONSOLE, &cmdStream);
+        closeStrStream(&replMultiStream);
+        continue;
+        }
+    }
+
     executeCommandLine(command, OUT_CONSOLE, &cmdStream);
     }
 
@@ -1023,7 +1044,120 @@ return(completion_matches(text,  (char * (*) (const char *, int) )command_genera
 #endif /* READLINE */
 
 
-char * getCommandLine(int batchMode, int * length)
+int isExpressionIncomplete(const char * str)
+{
+const char * p = str;
+int parenDepth = 0;
+int inQuote = 0;
+int braceDepth = 0;
+int hasToken = 0;
+
+while(*p != '\0')
+    {
+    if(inQuote)
+        {
+        if(*p == '\\')
+            {
+            p++;
+            if(*p != '\0') p++;
+            continue;
+            }
+        if(*p == '"')
+            {
+            inQuote = 0;
+            p++;
+            continue;
+            }
+        p++;
+        continue;
+        }
+
+    if(braceDepth > 0)
+        {
+        if(*p == '{')
+            braceDepth++;
+        else if(*p == '}')
+            braceDepth--;
+        p++;
+        continue;
+        }
+
+    /* check for line comments */
+    if(*p == ';' || *p == '#')
+        {
+        while(*p != '\0' && *p != '\n' && *p != '\r')
+            p++;
+        continue;
+        }
+
+    /* check for [text] tag string */
+    if(*p == '[' && strncmp(p, "[text]", 6) == 0)
+        {
+        char * endTag;
+        hasToken = 1;
+        p += 6;
+        endTag = strstr(p, "[/text]");
+        if(endTag != NULL)
+            {
+            p = endTag + 7;
+            continue;
+            }
+        else
+            return(1); /* unclosed [text] */
+        }
+
+    /* skip whitespace */
+    if((unsigned char)*p <= ' ')
+        {
+        p++;
+        continue;
+        }
+
+    hasToken = 1;
+
+    if(*p == '"')
+        {
+        inQuote = 1;
+        p++;
+        continue;
+        }
+
+    if(*p == '{')
+        {
+        braceDepth = 1;
+        p++;
+        continue;
+        }
+
+    if(*p == '(')
+        {
+        parenDepth++;
+        p++;
+        continue;
+        }
+
+    if(*p == ')')
+        {
+        parenDepth--;
+        if(parenDepth < 0)
+            return(0); /* unmatched close paren, let compiler error out */
+        p++;
+        continue;
+        }
+
+    p++;
+    }
+
+if(!hasToken)
+    return(0);
+
+if(inQuote || braceDepth > 0 || parenDepth > 0)
+    return(1);
+
+return(0);
+}
+
+char * readLineSingle(int batchMode, int * length)
 {
 char * cmd;
 int len;
@@ -1033,25 +1167,105 @@ if(!batchMode) varPrintf(OUT_CONSOLE, "%s", prompt());
 cmd = calloc(MAX_COMMAND_LINE + 4, 1);
 if(fgets(cmd, MAX_COMMAND_LINE - 1, IOchannel) == NULL) 
     {
-    puts("");
-    exit(0);
+    free(cmd);
+    return(NULL);
     }
 len = strlen(cmd);
-/* cut off line terminators  left by fgets */
-*(cmd + len - LINE_FEED_LEN) = 0;
-len -= LINE_FEED_LEN; /* v.10.6.2 */
+while(len > 0 && (cmd[len - 1] == '\r' || cmd[len - 1] == '\n'))
+    cmd[--len] = 0;
 #else /*  READLINE */
 int errnoSave = errno;
 if((cmd = readline(batchMode ? "" : prompt())) == NULL) 
+    return(NULL);
+errno = errnoSave; /* reset errno, set by readline() */
+len = strlen(cmd);
+#endif  
+
+if(length != NULL) *length = len;
+return(cmd);
+}
+
+char * getCommandLine(int batchMode, int * length)
+{
+char * cmd;
+char * line;
+char * p;
+int len;
+
+if(batchMode)
+    return(readLineSingle(batchMode, length));
+
+line = readLineSingle(FALSE, &len);
+if(line == NULL) 
     {
     puts("");
     exit(0);
     }
-errno = errnoSave; /* reset errno, set by readline() */
-len = strlen(cmd);
-if(len > 0) 
-    add_history(cmd);
-#endif  
+
+/* Check if line starts with ! (shell command) */
+p = line;
+while(*p == ' ' || *p == '\t') p++;
+if(*p == '!')
+    {
+#ifdef READLINE
+    if(len > 0) add_history(line);
+#endif
+    if(length != NULL) *length = len;
+    return(line);
+    }
+
+/* Check if [cmd] */
+if(strncmp(p, "[cmd]", 5) == 0)
+    {
+#ifdef READLINE
+    if(len > 0) add_history(line);
+#endif
+    if(length != NULL) *length = len;
+    return(line);
+    }
+
+/* Check if empty or whitespace only */
+if(*p == '\0')
+    {
+    if(length != NULL) *length = len;
+    return(line);
+    }
+
+/* If single line expression is complete, return it directly */
+if(!isExpressionIncomplete(line))
+    {
+#ifdef READLINE
+    if(len > 0) add_history(line);
+#endif
+    if(length != NULL) *length = len;
+    return(line);
+    }
+
+/* Multi-line statement: accumulate lines into replMultiStream */
+openStrStream(&replMultiStream, 1024, TRUE);
+writeStreamStr(&replMultiStream, line, len);
+writeStreamStr(&replMultiStream, "\n", 1);
+free(line);
+
+while(isExpressionIncomplete(replMultiStream.buffer))
+    {
+    line = readLineSingle(TRUE, &len);
+    if(line == NULL) break;
+    writeStreamStr(&replMultiStream, line, len);
+    writeStreamStr(&replMultiStream, "\n", 1);
+    free(line);
+    }
+
+cmd = malloc(replMultiStream.position + 1);
+memcpy(cmd, replMultiStream.buffer, replMultiStream.position);
+cmd[replMultiStream.position] = '\0';
+len = replMultiStream.position;
+
+#ifdef READLINE
+if(len > 0) add_history(cmd);
+#endif
+
+closeStrStream(&replMultiStream);
 
 if(length != NULL) *length = len;
 return(cmd);
@@ -1170,6 +1384,7 @@ xmlTags = NULL; /* force recreation */
 pushResultFlag = TRUE;
 currentContext = mainContext;
 itSymbol->contents = (UINT)nilCell;
+closeStrStream(&replMultiStream);
 }
 
 
@@ -1199,21 +1414,23 @@ STREAM stream;
 char buff[MAX_COMMAND_LINE];
 char * cmd;
 int batchMode = 0;
-int len;
+int len = 0;
 
 memset(buff + MAX_COMMAND_LINE -2, 0, 2);
 
 if(memcmp(command, "[cmd]", 5) == 0)
     batchMode = 2;
-else if(isTTY && (*command == '\n' || *command == '\r' || *command == 0))
-    batchMode = 1;
 
 #ifndef LIBRARY
 if(!batchMode && commandEvent != nilSymbol)
     command = processCommandEvent(command);
 #endif
 
-if(!isTTY && (*command == '\n' || *command == '\r' || *command == 0)) return;
+{
+char * p = command;
+while(*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+if(*p == 0) return;
+}
 
 if(!batchMode) 
     {
@@ -1238,11 +1455,20 @@ if(!batchMode)
 if(httpMode) goto RETURN_BATCHMODE;
 
 EXEC_COMMANDLINE:
-if(noPromptMode == FALSE && *command == '!' && *(command + 1) != ' ' && strlen(command) > 1)
+{
+char * p = command;
+while(*p == ' ' || *p == '\t') p++;
+if(noPromptMode == FALSE && *p == '!')
     {
-    if(system(command + 1)) return; /* avoid stupid compiler warning */
+    p++;
+    while(*p == ' ' || *p == '\t') p++;
+    if(*p != 0)
+        {
+        if(system(p)) return; /* avoid stupid compiler warning */
+        }
     return;
     }
+}
     
 if(cmdStream != NULL && batchMode)
     {
@@ -1261,8 +1487,7 @@ if(cmdStream != NULL && batchMode)
             }
         else
             if(fgets(buff, MAX_COMMAND_LINE - 1, IOchannel) == NULL) break;
-        if( (memcmp(buff, "[/cmd]", 6) == 0 && batchMode == 2) || 
-                (batchMode == 1 && (*buff == '\n' || *buff == '\r' || *buff == 0)))
+        if(memcmp(buff, "[/cmd]", 6) == 0 && batchMode == 2)
             {
             if(logTraffic) 
                 writeLog(cmdStream->buffer, 0);

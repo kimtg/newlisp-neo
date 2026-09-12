@@ -27,6 +27,10 @@ This enhanced release overhauls the newLISP engine with a **Direct-Threaded Byte
   - **Magic-Tagged Bytecode Handles**: Bytecode objects are tagged with `BYTECODE_MAGIC` (`0xBEEC0DE0`) in `cell->aux`, preserving newLISP's native last-element pointer optimization on standard lists and eliminating memory corruption hazards.
   - **100% Test Suite Pass**: All 396 built-in primitives, contexts as objects, and scoping tests in the `qa-dot` suite pass with **0 errors**.
 
+- **Modernized Interactive REPL (`newlisp.c`)**:
+  - **Automatic Multi-Line Input**: Automatically detects incomplete expressions (unclosed parentheses `(...)`, double-quoted strings `"..."`, `{...}` braced strings with nesting, and `[text]...[/text]` tags) and seamlessly collects continuation lines until brackets are balanced, then evaluates immediately.
+  - **Clean Line & Interrupt Handling**: Hitting `[Enter]` on an empty line returns a fresh prompt instead of entering legacy batch mode. `Ctrl+C` cleanly resets partial input buffers, and multi-line code can be piped directly from scripts/stdin without syntax errors.
+
 ---
 
 ## Performance Benchmarks: newLISP Neo vs. Python 3.14
