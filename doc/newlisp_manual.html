@@ -16121,7 +16121,7 @@ environment use the <a href="#extended_import">extended <tt>import</tt> syntax</
 
 (define LIBC (lookup ostype '(
 ("Windows" "msvcrt.dll")
-("OSX" "libc.dylib")
+("OSX" "libc.dylib"))))
 
 (import LIBC "printf")
 (printf "%g %s %d %c\n" 1.23 "hello" 999 65)
