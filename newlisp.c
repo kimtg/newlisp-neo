@@ -104,23 +104,23 @@ int bigEndian = 1; /* gets set in main() */
 int version = 10706;
 
 char copyright[]=
-"\nnewLISP Neo v.10.7.6n1 Copyright (C) 2020 Lutz Mueller; Copyright (C) 2026 KIM Taegyoon. All rights reserved.\n\n%s\n\n";
+"\nnewLISP Neo v.10.7.6n2 Copyright (C) 2020 Lutz Mueller; Copyright (C) 2026 KIM Taegyoon. All rights reserved.\n\n%s\n\n";
 
 #ifndef NEWLISP64
 #ifdef SUPPORT_UTF8
 char banner[]=
-"newLISP Neo v.10.7.6n1 32-bit on %s IPv4/6 UTF-8%s%s\n\n";
+"newLISP Neo v.10.7.6n2 32-bit on %s IPv4/6 UTF-8%s%s\n\n";
 #else
 char banner[]=
-"newLISP Neo v.10.7.6n1 32-bit on %s IPv4/6%s%s\n\n";
+"newLISP Neo v.10.7.6n2 32-bit on %s IPv4/6%s%s\n\n";
 #endif
 #else /* NEWLISP64 */
 #ifdef SUPPORT_UTF8
 char banner[]=
-"newLISP Neo v.10.7.6n1 64-bit on %s IPv4/6 UTF-8%s%s\n\n";
+"newLISP Neo v.10.7.6n2 64-bit on %s IPv4/6 UTF-8%s%s\n\n";
 #else
 char banner[]=
-"newLISP Neo v.10.7.6n1 64-bit on %s IPv4/6%s%s\n\n";
+"newLISP Neo v.10.7.6n2 64-bit on %s IPv4/6%s%s\n\n";
 #endif 
 #endif /* NEWLISP64 */
 
@@ -1458,10 +1458,9 @@ EXEC_COMMANDLINE:
 {
 char * p = command;
 while(*p == ' ' || *p == '\t') p++;
-if(noPromptMode == FALSE && *p == '!')
+if(noPromptMode == FALSE && *p == '!' && *(p + 1) != ' ' && strlen(p) > 1)
     {
     p++;
-    while(*p == ' ' || *p == '\t') p++;
     if(*p != 0)
         {
         if(system(p)) return; /* avoid stupid compiler warning */
