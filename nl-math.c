@@ -1248,7 +1248,7 @@ for(i = n * 2; i < N * 2; i++)
 
 fastFourierTransform(data, N, isign);
 
-list = listData = getCell(CELL_EXPRESSION);
+list = listData = allocGen1Cell(CELL_EXPRESSION);
 if(isign == -1) 
     for(i = 0; i < n * 2; i++) data[i] = data[i]/N;
 
@@ -1271,10 +1271,10 @@ CELL * makeListFromFloats(double num1, double num2)
     CELL * cell;
     CELL * list;
 
-    list = getCell(CELL_EXPRESSION);
-    list->contents = (UINT)stuffFloat(num1);
+    list = allocGen1Cell(CELL_EXPRESSION);
+    list->contents = (UINT)allocGen1Float(num1);
     cell = (CELL *)list->contents;
-    cell->next = stuffFloat(num2);
+    cell->next = allocGen1Float(num2);
     return(list);
     }
 
@@ -1398,14 +1398,14 @@ if( n == 0)
     return(stuffFloat(randnum));
     }
 
-dist = getCell(CELL_EXPRESSION);
+dist = allocGen1Cell(CELL_EXPRESSION);
 randnum = getRandom(offset, scale, type);
-dist->contents = (UINT)stuffFloat(randnum);
+dist->contents = (UINT)allocGen1Float(randnum);
 cell = (CELL*)dist->contents;
 for(i = 1; i < n; i++)
     {
     randnum = getRandom(offset, scale, type);
-    cell->next = stuffFloat(randnum);
+    cell->next = allocGen1Float(randnum);
     cell = cell->next;
     }
 
@@ -3010,13 +3010,13 @@ for(idx = 0; idx < maxIdx; idx++)
     {
     if(idx == 0)
         {
-        result = getCell(CELL_EXPRESSION);
-        result->contents = (UINT)stuffFloat(*(postP + idx));
+        result = allocGen1Cell(CELL_EXPRESSION);
+        result->contents = (UINT)allocGen1Float(*(postP + idx));
         cell = (CELL *)result->contents;
         }
     else
         {
-        cell->next = stuffFloat(*(postP + idx));
+        cell->next = allocGen1Float(*(postP + idx));
         cell = cell->next;
         }
     }

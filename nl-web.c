@@ -1097,11 +1097,36 @@ request = decoded;
 
 setenv("REQUEST_URI", request, 1); /* 10.7.4 */
 
+/* normalize backslashes to slashes */
+for(sptr = request; *sptr; sptr++)
+    if(*sptr == '\\') *sptr = '/';
+
+/* strip leading slashes */
+while(*request == '/') request++;
+
+/* reject drive letters on Windows (e.g. C:) */
+if(isalpha((unsigned char)request[0]) && request[1] == ':')
+    {
+    sendHTTPmessage(403, "Forbidden", request);
+    return(TRUE);
+    }
+
+/* reject path traversal sequences */
+if(strcmp(request, "..") == 0 || strncmp(request, "../", 3) == 0 ||
+   strstr(request, "/../") != NULL || endsWith(request, "/.."))
+    {
+    sendHTTPmessage(403, "Forbidden", request);
+    return(TRUE);
+    }
+
 /* change to base dir of request file */
 sptr = request + strlen(request);
 while(*sptr != '/' && sptr != request) --sptr;
 if(*sptr == '/') 
     {
+    char currentDir[PATH_MAX];
+    size_t rootLen;
+
     *sptr = 0;
     sptr++;
     if(chdir(request))
@@ -1109,7 +1134,32 @@ if(*sptr == '/')
         sendHTTPmessage(404, ERROR_404, request);
         return(TRUE);
         }
+
+    /* verify canonical directory remains inside startupDir */
+    if(realpath(".", currentDir) == NULL)
+        {
+        chdir(startupDir);
+        sendHTTPmessage(404, ERROR_404, request);
+        return(TRUE);
+        }
+    rootLen = strlen(startupDir);
+    if(strncmp(currentDir, startupDir, rootLen) != 0 ||
+       (currentDir[rootLen] != 0 && currentDir[rootLen] != '/' && currentDir[rootLen] != '\\'))
+        {
+        chdir(startupDir);
+        sendHTTPmessage(403, "Forbidden", request);
+        return(TRUE);
+        }
+
     request = sptr;
+    }
+
+/* ensure remaining filename contains no traversal or slashes */
+if(strcmp(request, "..") == 0 || strchr(request, '/') != NULL || strchr(request, '\\') != NULL)
+    {
+    chdir(startupDir);
+    sendHTTPmessage(403, "Forbidden", request);
+    return(TRUE);
     }
 
 if((len = strlen(request)) == 0)
@@ -1383,15 +1433,32 @@ if(isFile(tempDir, 0) != 0)
     return;
     }
 
-size = strlen(request) + PATH_MAX;
+#if defined (WINDOWS) || (OS2)
+if(GetTempFileNameA(tempDir, "nl", 0, tempfile) == 0)
+    {
+    sendHTTPmessage(500, "cannot create temp file", request);
+    return;
+    }
+#else
+snprintf(tempfile, PATH_MAX, "%s/nl-XXXXXX", tempDir);
+{
+int tfd = mkstemp(tempfile);
+if(tfd < 0)
+    {
+    sendHTTPmessage(500, "cannot create temp file", request);
+    return;
+    }
+close(tfd);
+}
+#endif
+
+size = strlen(request) + strlen(tempfile) + 64;
 command = alloca(size);
-snprintf(tempfile, PATH_MAX, "%s/nl%04x-%08x-%08x", 
-    tempDir, (unsigned int)size, (unsigned int)random(), (unsigned int)random());
 
 #if defined (WINDOWS) || (OS2)
-snprintf(command, size - 1, "newlisp \"%s\" > %s", request, tempfile);
+snprintf(command, size - 1, "newlisp \"%s\" > \"%s\"", request, tempfile);
 #else
-snprintf(command, size - 1, "./\"%s\" > %s", request, tempfile);
+snprintf(command, size - 1, "./\"%s\" > \"%s\"", request, tempfile);
 #endif
 
 if((handle = popen(command, "w")) == NULL)
@@ -1481,12 +1548,14 @@ char *end = NULL;
 
 while(*src)
     {
-    if(*src == '%')
+    if(*src == '%' && isxdigit((unsigned char)*(src + 1)) && isxdigit((unsigned char)*(src + 2)))
         {
-        memcpy(code, ++src, 2);
-        ascii = strtoul(code, &end, 16);
+        code[0] = *(src + 1);
+        code[1] = *(src + 2);
+        code[2] = 0;
+        ascii = (unsigned int)strtoul(code, &end, 16);
         *dest++ = (char)ascii;
-        src += 2;
+        src += 3;
         }
     else
         *dest++ = *src++;

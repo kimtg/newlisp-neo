@@ -914,7 +914,6 @@ else if((*jsonStr == '-' || *jsonStr == '+') && isDigit((unsigned char)*(jsonStr
     ptr = jsonStr++;
 else goto NOT_STRING_OR_NUMBER;
 
-number = alloca(32);
 while(isDigit((unsigned char)*jsonStr)) ++jsonStr;
 if(*jsonStr == '.')
     {
@@ -940,6 +939,9 @@ if(*jsonStr != ' ' && *jsonStr != '\n' && *jsonStr != '\n' && *jsonStr != '\t' &
     return(setJSONerror(ERR_JSON_INVALID_NUMBER, jsonStr));
 
 len = (size_t)jsonStr - (size_t)ptr;
+if(len > 1024)
+    return(setJSONerror(ERR_JSON_INVALID_NUMBER, jsonStr));
+number = alloca(len + 1);
 memcpy(number, ptr, len);
 number[len] = 0;
 *restStr = jsonStr;

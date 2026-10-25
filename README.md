@@ -4,6 +4,7 @@
 [![Regression Tests](https://img.shields.io/badge/qa--dot-100%25%20Passing-brightgreen.svg)](qa-dot)
 [![Tail Call Optimization](https://img.shields.io/badge/TCO-O(1)%20Stack-blueviolet.svg)](#3-tail-call-optimization-tco-and-mutual-recursion)
 [![Speed vs Python](https://img.shields.io/badge/Speed%20vs%20Python%203.14-2.02x%20Faster-orange.svg)](#performance-benchmarks-newlisp-neo-vs-python-314)
+[![Security: Hardened](https://img.shields.io/badge/Security-Hardened-success.svg)](#key-enhancements)
 
 **newLISP Neo** is a modernized, high-performance distribution of [newLISP](http://www.newlisp.org) — an elegant, lightweight, LISP-like scripting language originally created by **Lutz Mueller** for general programming, artificial intelligence, data manipulation, and statistical computing.
 
@@ -30,8 +31,13 @@ This enhanced release overhauls the newLISP engine with a **Direct-Threaded Byte
   - **Cheney-Style Evacuation**: Live objects surviving nursery collections are promoted (`gcEvacuate`) to the tenured Gen 1 heap.
   - **Comprehensive Root Scanning**: Traverses symbol trees, context tables, runtime stacks (`envStack`, `resultStack`, `lambdaStack`), and active VM execution frames.
 
-- **Memory Safety & Rock-Solid Compatibility**:
+- **Memory Safety, Security Hardening & Robustness**:
   - **Magic-Tagged Bytecode Handles**: Bytecode objects are tagged with `BYTECODE_MAGIC` (`0xBEEC0DE0`) in `cell->aux`, preserving newLISP's native last-element pointer optimization on standard lists and eliminating memory corruption hazards.
+  - **HTTP Path Traversal Defense (`nl-web.c`)**: Canonicalizes requested file paths with `realpath` and asserts containment within `startupDir`, rejecting `..` traversal sequences, redundant slashes, and drive-letter escapes with HTTP 403 Forbidden.
+  - **Memory-Safe JSON & URL Parsing (`nl-xml-json.c`, `nl-web.c`)**: Dynamic buffer allocation replaces static stack buffers for numeric JSON literals of arbitrary length; `url_decode` strictly validates hexadecimal format before consumption to eliminate out-of-bounds reads.
+  - **Bundled PCRE 5.0 Security Hardening (`pcre.c`)**: Hardened regex compilation against integer wrapping in quantifier repeat counters (CVE-2005-2491), malformed POSIX character class length discrepancies (CVE-2006-7225), and pattern allocation overflow.
+  - **Atomic Temporary File Creation (`nl-web.c`)**: Replaced predictable pseudo-random filenames in CGI handling with atomic OS temporary file creation (`GetTempFileNameA` on Windows, `mkstemp` on POSIX), eliminating symlink race conditions.
+  - **GC Heap Stability & Variadic Safety (`newlisp.c`, `nl-filesys.c`, `nl-math.c`, `nl-list.c`)**: Evacuates global runtime registers (`throwResult`, `countCell`) during Gen 0 sweeps; allocates long-lived multi-cell structures in list/math generators (`sequence`, `fft`, `normal`, `count`) directly in Gen 1 to eliminate unrooted transient cell hazards; uses C99 `va_copy` in `my_vasprintf` for variadic safety on 64-bit platforms.
   - **100% Test Suite Pass**: All 396 built-in primitives, contexts as objects, and scoping tests in the `qa-dot` suite pass with **0 errors**.
 
 - **Modernized Interactive REPL (`newlisp.c`)**:

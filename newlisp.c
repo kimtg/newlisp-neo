@@ -104,23 +104,23 @@ int bigEndian = 1; /* gets set in main() */
 int version = 10706;
 
 char copyright[]=
-"\nnewLISP Neo v.10.7.6n2 Copyright (C) 2020 Lutz Mueller; Copyright (C) 2026 KIM Taegyoon. All rights reserved.\n\n%s\n\n";
+"\nnewLISP Neo v.10.7.6n3 Copyright (C) 2020 Lutz Mueller; Copyright (C) 2026 KIM Taegyoon. All rights reserved.\n\n%s\n\n";
 
 #ifndef NEWLISP64
 #ifdef SUPPORT_UTF8
 char banner[]=
-"newLISP Neo v.10.7.6n2 32-bit on %s IPv4/6 UTF-8%s%s\n\n";
+"newLISP Neo v.10.7.6n3 32-bit on %s IPv4/6 UTF-8%s%s\n\n";
 #else
 char banner[]=
-"newLISP Neo v.10.7.6n2 32-bit on %s IPv4/6%s%s\n\n";
+"newLISP Neo v.10.7.6n3 32-bit on %s IPv4/6%s%s\n\n";
 #endif
 #else /* NEWLISP64 */
 #ifdef SUPPORT_UTF8
 char banner[]=
-"newLISP Neo v.10.7.6n2 64-bit on %s IPv4/6 UTF-8%s%s\n\n";
+"newLISP Neo v.10.7.6n3 64-bit on %s IPv4/6 UTF-8%s%s\n\n";
 #else
 char banner[]=
-"newLISP Neo v.10.7.6n2 64-bit on %s IPv4/6%s%s\n\n";
+"newLISP Neo v.10.7.6n3 64-bit on %s IPv4/6%s%s\n\n";
 #endif 
 #endif /* NEWLISP64 */
 
@@ -2506,6 +2506,12 @@ if(lastCellCopied != NULL && isInGen0(lastCellCopied))
 if(stringCell != NULL && isInGen0(stringCell))
     stringCell = gcEvacuate(stringCell);
 
+if(throwResult != NULL && isInGen0(throwResult))
+    throwResult = gcEvacuate(throwResult);
+
+if(countCell != NULL && isInGen0(countCell))
+    countCell = gcEvacuate(countCell);
+
 /* 5b. Bytecode VM stack and active frames */
 gcEvacuateVMRoots();
 
@@ -2547,11 +2553,11 @@ va_list ap;
 
 va_start(ap, argc);
 
-list = makeCell(CELL_EXPRESSION, (UINT)stuffInteger(va_arg(ap, UINT)));
+list = allocGen1CellWithContents(CELL_EXPRESSION, (UINT)allocGen1CellWithContents(CELL_LONG, va_arg(ap, UINT)));
 cell = (CELL *)list->contents;
 
 while(--argc)
-    cell = cell->next = stuffInteger(va_arg(ap, UINT));
+    cell = cell->next = allocGen1CellWithContents(CELL_LONG, va_arg(ap, UINT));
 
 va_end(ap);
 

@@ -758,6 +758,17 @@ CELL * allocGen1Cell(int type);
 CELL * allocGen1CellWithContents(int type, UINT contents);
 CELL * gcEvacuate(CELL * cell);
 
+static inline CELL * allocGen1Float(double val)
+{
+    CELL * cell = allocGen1Cell(CELL_FLOAT);
+#ifndef NEWLISP64
+    *(double *)&cell->aux = val;
+#else
+    *(double *)&cell->contents = val;
+#endif
+    return cell;
+}
+
 static inline CELL * stuffInteger(UINT contents)
 {
     CELL * cell;

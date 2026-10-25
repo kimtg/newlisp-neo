@@ -246,7 +246,7 @@ static const unsigned char digitab[] =
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*    - 71 40 */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  72- |     */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  & - 87 50 */
-  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  88- ¬     */
+  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  88- Â¬     */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  - -103 60 */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /* 104- ?     */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /* 112-119 70 */
@@ -280,7 +280,7 @@ static const unsigned char ebcdic_chartab[] = { /* chartable partial dup */
   0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*    - 71 */
   0x00,0x00,0x00,0x80,0x00,0x80,0x80,0x80, /*  72- |  */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  & - 87 */
-  0x00,0x00,0x00,0x80,0x80,0x80,0x00,0x00, /*  88- ¬  */
+  0x00,0x00,0x00,0x80,0x80,0x80,0x00,0x00, /*  88- Â¬  */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /*  - -103 */
   0x00,0x00,0x00,0x00,0x00,0x10,0x00,0x80, /* 104- ?  */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /* 112-119 */
@@ -1245,14 +1245,30 @@ read_repeat_counts(const uschar *p, int *minp, int *maxp, const char **errorptr)
 int min = 0;
 int max = -1;
 
-while ((digitab[*p] & ctype_digit) != 0) min = min * 10 + *p++ - '0';
+while ((digitab[*p] & ctype_digit) != 0)
+  {
+  min = min * 10 + *p++ - '0';
+  if (min > 65535)
+    {
+    *errorptr = ERR5;
+    return p;
+    }
+  }
 
 if (*p == '}') max = min; else
   {
   if (*(++p) != '}')
     {
     max = 0;
-    while((digitab[*p] & ctype_digit) != 0) max = max * 10 + *p++ - '0';
+    while((digitab[*p] & ctype_digit) != 0)
+      {
+      max = max * 10 + *p++ - '0';
+      if (max > 65535)
+        {
+        *errorptr = ERR5;
+        return p;
+        }
+      }
     if (max < min)
       {
       *errorptr = ERR4;
@@ -1872,6 +1888,7 @@ check_posix_syntax(const uschar *ptr, const uschar **endptr, compile_data *cd)
 {
 int terminator;          /* Don't combine these lines; the Solaris cc */
 terminator = *(++ptr);   /* compiler warns about "non-constant" initializer. */
+if (terminator != ':' && terminator != '.' && terminator != '=') return FALSE;
 if (*(++ptr) == '^') ptr++;
 while ((cd->ctypes[*ptr] & ctype_letter) != 0) ptr++;
 if (*ptr == terminator && ptr[1] == ']')
@@ -5441,7 +5458,7 @@ length += 2 + LINK_SIZE;    /* For final KET and END */
 if ((options & PCRE_AUTO_CALLOUT) != 0)
   length += 2 + 2*LINK_SIZE;  /* For final callout */
 
-if (length > MAX_PATTERN_SIZE)
+if (length < 0 || length > MAX_PATTERN_SIZE || name_count > 10000 || max_name_size > 1024)
   {
   *errorptr = ERR20;
   return NULL;
@@ -5451,6 +5468,11 @@ if (length > MAX_PATTERN_SIZE)
 externally provided function. */
 
 size = length + sizeof(real_pcre) + name_count * (max_name_size + 3);
+if (size < 0 || size > MAX_PATTERN_SIZE + 65536)
+  {
+  *errorptr = ERR20;
+  return NULL;
+  }
 re = (real_pcre *)(pcre_malloc)(size);
 
 if (re == NULL)

@@ -719,11 +719,12 @@ while(i < lengthList)
     }
 
 
-cell = stuffInteger(counts[0]);
+cell = allocGen1CellWithContents(CELL_LONG, counts[0]);
+result = allocGen1Cell(CELL_EXPRESSION);
 result->contents = (UINT)cell;
 for(i = 1; i < lengthItems; i++)
     {
-    cell->next = stuffInteger(counts[i]);
+    cell->next = allocGen1CellWithContents(CELL_LONG, counts[i]);
     cell = cell->next;
     }
 freeMemory(counts);
@@ -1092,23 +1093,23 @@ else
     step = (fromFlt > toFlt) ? -step : step;
     cntFlt = (fromFlt < toFlt) ? (toFlt - fromFlt)/step : (fromFlt - toFlt)/step;
     stepCnt = (cntFlt > 0.0) ? floor(cntFlt + 0.0000000001) : floor(-cntFlt + 0.0000000001);
-    cell = stuffFloat(fromFlt);
+    cell = allocGen1Float(fromFlt);
     }
-sequence = makeCell(CELL_EXPRESSION, (UINT)cell);
+sequence = allocGen1CellWithContents(CELL_EXPRESSION, (UINT)cell);
 
 for(i = 1; i <= stepCnt; i++)
     {
     if(intFlag)
         {
         if(fromInt64 > toInt64)
-            cell->next = stuffInteger(fromInt64 - i);
+            cell->next = allocGen1CellWithContents(CELL_LONG, fromInt64 - i);
         else
-            cell->next = stuffInteger(fromInt64 + i);
+            cell->next = allocGen1CellWithContents(CELL_LONG, fromInt64 + i);
         }
     else
         {
         interval = fromFlt + i * step;
-        cell->next = stuffFloat(interval);
+        cell->next = allocGen1Float(interval);
         }
     cell = cell->next;
     }

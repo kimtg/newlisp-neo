@@ -3116,9 +3116,13 @@ return(stuffInteger((UINT)result));
 int my_vasprintf(char * * buffer, const char * format, va_list argptr)
 {
 int size;
+va_list args_copy;
 
 /* get size */
-size = vsnprintf(NULL, 0, format, argptr);
+va_copy(args_copy, argptr);
+size = vsnprintf(NULL, 0, format, args_copy);
+va_end(args_copy);
+
 if (size < 0) return -1;
 
 *buffer = calloc(size + 1, 1);
